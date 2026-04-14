@@ -1,0 +1,28 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+}
+
+body {
+  @apply bg-[#0d0d0d] text-white antialiased;
+}
+
+button, input, textarea, select {
+  @apply bg-[#111111] text-white border border-zinc-800 focus:border-gold focus:outline-none;
+}
+
+input, textarea, select {
+  font-family: 'Inter', 'Segoe UI', sans-serif;
+}
+
+h1, h2, h3, h4, h5, h6, .label-display {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+}
+
+::selection {
+  background: rgba(245, 197, 24, 0.3);
+}
