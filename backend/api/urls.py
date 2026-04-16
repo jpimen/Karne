@@ -1,26 +1,24 @@
-from django.urls import path, include
+from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 from .views import (
-    RegisterView,
+    AssignmentViewSet,
     CurrentUserView,
-    TrainingProgramViewSet,
-    ExerciseViewSet,
-    WorkoutSessionViewSet,
+    ProgramViewSet,
+    RegisterView,
+    SessionViewSet,
+    ClientViewSet,
     dashboard,
-    analytics_weekly_volume,
-    analytics_prs,
 )
 
 router = DefaultRouter()
-router.register('programs', TrainingProgramViewSet, basename='program')
-router.register('exercises', ExerciseViewSet, basename='exercise')
-router.register('sessions', WorkoutSessionViewSet, basename='session')
+router.register('programs', ProgramViewSet, basename='program')
+router.register('clients', ClientViewSet, basename='client')
+router.register('assignments', AssignmentViewSet, basename='assignment')
+router.register('sessions', SessionViewSet, basename='session')
 
 urlpatterns = [
     path('auth/register/', RegisterView.as_view(), name='auth_register'),
     path('auth/profile/', CurrentUserView.as_view(), name='auth_profile'),
     path('dashboard/', dashboard, name='dashboard'),
-    path('analytics/weekly-volume/', analytics_weekly_volume, name='analytics_weekly_volume'),
-    path('analytics/prs/', analytics_prs, name='analytics_prs'),
     path('', include(router.urls)),
 ]
