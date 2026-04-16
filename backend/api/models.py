@@ -1,100 +1,147 @@
+import uuid
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.utils import timezone
 
-STATUS_CHOICES = [
-    ('novice', 'Novice'),
-    ('pro', 'Pro'),
-    ('elite', 'Elite'),
+ROLE_CHOICES = [
+    ('admin', 'Admin'),
+    ('coach', 'Coach'),
+    ('client', 'Client'),
 ]
 
-PROGRAM_TYPES = [
-    ('hypertrophy', 'Hypertrophy'),
-    ('strength', 'Strength'),
-    ('power', 'Power'),
-    ('deload', 'Deload'),
+PROGRAM_STATUS_CHOICES = [
+    ('draft', 'Draft'),
+    ('published', 'Published'),
+    ('archived', 'Archived'),
 ]
 
-EFFORT_TAGS = [
-    ('elite', 'Elite Effort'),
-    ('recovery', 'Recovery'),
-    ('standard', 'Standard'),
-]
+
+def generate_join_code():
+    return uuid.uuid4().hex[:8].upper()
+
 
 class User(AbstractUser):
+    # role = models.CharField(max_length=16, choices=ROLE_CHOICES, default='client')
+    # coach = models.ForeignKey(
+    #     'self',
+    #     on_delete=models.SET_NULL,
+    #     null=True,
+    #     blank=True,
+    #     related_name='clients',
+    # )
+    # join_code = models.CharField(blank=True, max_length=16, null=True, unique=True)
+    # created_at = models.DateTimeField(auto_now_add=True)
     avatar = models.URLField(blank=True, null=True)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='novice')
-    subscription_tier = models.CharField(max_length=32, blank=True, default='free')
+    status = models.CharField(choices=[('novice', 'Novice'), ('pro', 'Pro'), ('elite', 'Elite')], default='novice', max_length=20)
+    subscription_tier = models.CharField(blank=True, default='free', max_length=32)
+
+    # def save(self, *args, **kwargs):
+    #     if not self.join_code:
+    #         self.join_code = generate_join_code()
+    #     super().save(*args, **kwargs)
 
     def __str__(self):
         return self.username
 
-class TrainingProgram(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='programs')
-    name = models.CharField(max_length=120)
-    week_current = models.PositiveIntegerField(default=1)
-    week_total = models.PositiveIntegerField(default=8)
-    program_type = models.CharField(max_length=24, choices=PROGRAM_TYPES, default='hypertrophy')
+
+class Program(models.Model):
+    coach = models.ForeignKey(User, on_delete=models.CASCADE, related_name='programs')
+    name = models.CharField(max_length=140)
+    duration_weeks = models.PositiveSmallIntegerField(default=8)
+    frequency_per_week = models.PositiveSmallIntegerField(default=4)
+    goal = models.CharField(max_length=140, blank=True)
+    description = models.TextField(blank=True)
+    status = models.CharField(max_length=16, choices=PROGRAM_STATUS_CHOICES, default='draft')
     created_at = models.DateTimeField(auto_now_add=True)
+    published_at = models.DateTimeField(blank=True, null=True)
+
+    def save(self, *args, **kwargs):
+        if self.status == 'published' and self.published_at is None:
+            self.published_at = timezone.now()
+        super().save(*args, **kwargs)
 
     def __str__(self):
-        return f'{self.name} ({self.user.username})'
+        return f'{self.name} ({self.coach.username})'
 
-class TrainingDay(models.Model):
-    program = models.ForeignKey(TrainingProgram, on_delete=models.CASCADE, related_name='days')
-    day_of_week = models.PositiveSmallIntegerField()
-    day_label = models.CharField(max_length=120)
 
-    def __str__(self):
-        return f'{self.program.name} - {self.day_label}'
+class Week(models.Model):
+    program = models.ForeignKey(Program, on_delete=models.CASCADE, related_name='weeks')
+    week_number = models.PositiveSmallIntegerField()
 
-class Exercise(models.Model):
-    name = models.CharField(max_length=120)
-    category = models.CharField(max_length=80, blank=True)
-    muscle_group = models.CharField(max_length=80, blank=True)
+    class Meta:
+        unique_together = ('program', 'week_number')
 
     def __str__(self):
-        return self.name
+        return f'{self.program.name} - Week {self.week_number}'
+
+
+class Day(models.Model):
+    week = models.ForeignKey(Week, on_delete=models.CASCADE, related_name='days')
+    day_number = models.PositiveSmallIntegerField()
+    label = models.CharField(max_length=120, blank=True)
+
+    class Meta:
+        unique_together = ('week', 'day_number')
+
+    def __str__(self):
+        label = self.label if self.label else f'Day {self.day_number}'
+        return f'{self.week.program.name} - {label}'
+
 
 class ProgramExercise(models.Model):
-    day = models.ForeignKey(TrainingDay, on_delete=models.CASCADE, related_name='exercises')
-    exercise = models.ForeignKey(Exercise, on_delete=models.CASCADE, related_name='program_instances')
+    day = models.ForeignKey(Day, on_delete=models.CASCADE, related_name='exercises')
+    order = models.PositiveSmallIntegerField(default=0)
+    name = models.CharField(max_length=140)
     sets = models.PositiveSmallIntegerField(default=3)
-    reps = models.CharField(max_length=32, default='8')
-    target_weight = models.FloatField(default=0.0)
+    reps = models.CharField(max_length=32, blank=True)
+    load = models.CharField(max_length=32, blank=True)
+    rpe = models.DecimalField(max_digits=4, decimal_places=1, blank=True, null=True)
+    intensity = models.CharField(max_length=32, blank=True)
+    rest = models.CharField(max_length=32, blank=True)
+    notes = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ['order']
 
     def __str__(self):
-        return f'{self.day.day_label} - {self.exercise.name}'
+        return f'{self.name} ({self.day})'
 
-class WorkoutSession(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sessions')
+
+class Assignment(models.Model):
+    program = models.ForeignKey(Program, on_delete=models.CASCADE, related_name='assignments')
+    client = models.ForeignKey(User, on_delete=models.CASCADE, related_name='assignments')
+    assigned_at = models.DateTimeField(auto_now_add=True)
+    start_date = models.DateField()
+
+    class Meta:
+        unique_together = ('program', 'client')
+
+    def __str__(self):
+        return f'{self.client.username} assigned {self.program.name}'
+
+
+class Session(models.Model):
+    client = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sessions')
+    day = models.ForeignKey(Day, on_delete=models.SET_NULL, null=True, blank=True)
     date = models.DateField()
-    duration_minutes = models.PositiveIntegerField(default=0)
-    total_volume_kg = models.FloatField(default=0.0)
-    effort_tag = models.CharField(max_length=20, choices=EFFORT_TAGS, default='standard')
+    duration = models.PositiveIntegerField(default=0)
+    completed = models.BooleanField(default=False)
     notes = models.TextField(blank=True)
 
     def __str__(self):
-        return f'{self.user.username} session {self.date}'
+        return f'{self.client.username} session {self.date}'
 
-class SessionSet(models.Model):
-    session = models.ForeignKey(WorkoutSession, on_delete=models.CASCADE, related_name='sets')
-    exercise = models.ForeignKey(Exercise, on_delete=models.CASCADE)
+
+class LoggedSet(models.Model):
+    session = models.ForeignKey(Session, on_delete=models.CASCADE, related_name='logged_sets')
+    exercise = models.ForeignKey(ProgramExercise, on_delete=models.SET_NULL, null=True, blank=True)
     set_number = models.PositiveSmallIntegerField()
-    reps = models.PositiveIntegerField()
-    weight_kg = models.FloatField()
-    rpe = models.FloatField(default=0.0)
+    actual_reps = models.CharField(max_length=32, blank=True)
+    actual_load = models.CharField(max_length=32, blank=True)
+    rpe = models.DecimalField(max_digits=4, decimal_places=1, blank=True, null=True)
+
+    class Meta:
+        ordering = ['set_number']
 
     def __str__(self):
         return f'{self.session} set {self.set_number}'
-
-class PersonalRecord(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='prs')
-    exercise = models.ForeignKey(Exercise, on_delete=models.CASCADE)
-    weight_kg = models.FloatField()
-    date_achieved = models.DateField()
-
-    class Meta:
-        unique_together = ('user', 'exercise')
-
-    def __str__(self):
-        return f'{self.user.username} PR {self.exercise.name} {self.weight_kg}kg'

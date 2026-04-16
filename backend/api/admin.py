@@ -1,20 +1,20 @@
 from django.contrib import admin
 from .models import (
-    User,
-    TrainingProgram,
-    TrainingDay,
-    Exercise,
+    Assignment,
+    Day,
+    LoggedSet,
+    Program,
     ProgramExercise,
-    WorkoutSession,
-    SessionSet,
-    PersonalRecord,
+    Session,
+    User,
+    Week,
 )
 
 admin.site.register(User)
-admin.site.register(TrainingProgram)
-admin.site.register(TrainingDay)
-admin.site.register(Exercise)
+admin.site.register(Program)
+admin.site.register(Week)
+admin.site.register(Day)
 admin.site.register(ProgramExercise)
-admin.site.register(WorkoutSession)
-admin.site.register(SessionSet)
-admin.site.register(PersonalRecord)
+admin.site.register(Assignment)
+admin.site.register(Session)
+admin.site.register(LoggedSet)
