@@ -7,6 +7,7 @@ import ProgramBuilder from './pages/ProgramBuilder'
 import TrainingLog from './pages/TrainingLog'
 import Analytics from './pages/Analytics'
 import Inventory from './pages/Inventory'
+import Clients from './pages/Clients'
 import Login from './pages/Login'
 import Register from './pages/Register'
 
@@ -18,6 +19,7 @@ function App() {
         <Route path="/features" element={<Features />} />
         <Route path="/pricing" element={<Pricing />} />
         <Route path="/app" element={<Dashboard />} />
+        <Route path="/app/clients" element={<Clients />} />
         <Route path="/app/program-builder" element={<ProgramBuilder />} />
         <Route path="/app/training-log" element={<TrainingLog />} />
         <Route path="/app/analytics" element={<Analytics />} />

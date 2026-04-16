@@ -15,7 +15,7 @@ function Login() {
       const token = response.data.access
       setAuthToken(token)
       localStorage.setItem('lab_access_token', token)
-      navigate('/')
+      navigate('/app')
     } catch (err) {
       setError('Login failed. Check your credentials.')
     }

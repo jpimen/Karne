@@ -2,10 +2,10 @@ import { NavLink } from 'react-router-dom'
 
 const navItems = [
   { label: 'Dashboard', to: '/app', icon: '▹' },
+  { label: 'Clients', to: '/app/clients', icon: '▹' },
   { label: 'Program Builder', to: '/app/program-builder', icon: '▹' },
-  { label: 'Training Log', to: '/app/training-log', icon: '▹' },
+  { label: 'Program Library', to: '/app/inventory', icon: '▹' },
   { label: 'Analytics', to: '/app/analytics', icon: '▹' },
-  { label: 'Inventory', to: '/app/inventory', icon: '▹' },
 ]
 
 function AppShell({ title, subtitle, children }) {
