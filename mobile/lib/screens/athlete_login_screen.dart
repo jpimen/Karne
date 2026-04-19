@@ -5,6 +5,7 @@ import 'program_list_screen.dart';
 import 'forgot_password_screen.dart';
 import 'athlete_join_screen.dart';
 import 'athlete_signup_screen.dart';
+import 'workout_log_screen.dart';
 
 class AthleteLoginScreen extends StatefulWidget {
   const AthleteLoginScreen({super.key});
@@ -346,6 +347,25 @@ class _AthleteLoginScreenState extends State<AthleteLoginScreen> {
                   'JOIN WITH INVITE CODE',
                   style: TextStyle(
                     color: Color(0xFFD4A017),
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              // Bypass login
+              TextButton(
+                onPressed: () {
+                  final appProvider = Provider.of<AppProvider>(context, listen: false);
+                  appProvider.setAuthenticated(true, userName: 'Guest (Dev)');
+                  Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(builder: (_) => const WorkoutLogScreen()),
+                  );
+                },
+                child: const Text(
+                  'BYPASS LOGIN (DEV)',
+                  style: TextStyle(
+                    color: Colors.grey,
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
                   ),

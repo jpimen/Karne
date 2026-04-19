@@ -86,7 +86,10 @@ class ApiService {
   Future<List<TrainingProgram>> getPrograms() async {
     try {
       final response = await _dio.get('/programs/');
-      final List<dynamic> data = response.data;
+      final dynamic responseData = response.data;
+      final List<dynamic> data = responseData is Map<String, dynamic> && responseData.containsKey('results')
+          ? responseData['results'] as List<dynamic>
+          : responseData as List<dynamic>;
       return data.map((json) => TrainingProgram.fromJson(json)).toList();
     } catch (e) {
       throw Exception('Failed to load programs: $e');
@@ -126,7 +129,10 @@ class ApiService {
   Future<List<Exercise>> getExercises() async {
     try {
       final response = await _dio.get('/exercises/');
-      final List<dynamic> data = response.data;
+      final dynamic responseData = response.data;
+      final List<dynamic> data = responseData is Map<String, dynamic> && responseData.containsKey('results')
+          ? responseData['results'] as List<dynamic>
+          : responseData as List<dynamic>;
       return data.map((json) => Exercise.fromJson(json)).toList();
     } catch (e) {
       throw Exception('Failed to load exercises: $e');
