@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/api_models.dart';
 import '../providers/app_provider.dart';
-import 'program_detail_screen.dart';
+import 'program_overview_screen.dart';
 
 class ProgramListScreen extends StatefulWidget {
   const ProgramListScreen({super.key});
@@ -33,7 +33,25 @@ class _ProgramListScreenState extends State<ProgramListScreen> {
       final programs = await appProvider.apiService.getPrograms();
 
       setState(() {
-        _programs = programs;
+        if (programs.isEmpty) {
+          // Temporarily inject a mock program for UI testing since the DB is empty
+          _programs = [
+            TrainingProgram(
+              id: 999,
+              name: 'POWER HYPERTROPHY',
+              weekCurrent: 1,
+              weekTotal: 8,
+              programType: 'hypertrophy',
+              createdAt: DateTime.now(),
+              days: [
+                TrainingDay(id: 1, dayOfWeek: 1, dayLabel: 'Lower Body', exercises: []),
+                TrainingDay(id: 2, dayOfWeek: 2, dayLabel: 'Upper Body', exercises: []),
+              ],
+            )
+          ];
+        } else {
+          _programs = programs;
+        }
         _isLoading = false;
       });
     } catch (e) {
@@ -139,7 +157,7 @@ class _ProgramListScreenState extends State<ProgramListScreen> {
                                   context,
                                   MaterialPageRoute(
                                     builder: (context) =>
-                                        ProgramDetailScreen(program: program),
+                                        ProgramOverviewScreen(program: program),
                                   ),
                                 );
                               },
