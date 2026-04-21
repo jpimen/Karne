@@ -13,6 +13,7 @@ import 'screens/athlete_login_screen.dart';
 import 'screens/forgot_password_screen.dart';
 import 'screens/home_welcome_screen.dart';
 import 'screens/program_list_screen.dart';
+import 'screens/dashboard_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -86,6 +87,7 @@ class LaboratoryApp extends StatelessWidget {
           '/login': (context) => const AthleteLoginScreen(),
           '/forgot-password': (context) => const ForgotPasswordScreen(),
           '/programs': (context) => const ProgramListScreen(),
+          '/dashboard': (context) => const DashboardScreen(),
         },
       ),
     );

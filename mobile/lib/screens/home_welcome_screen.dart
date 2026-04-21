@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
-import 'program_list_screen.dart';
+import 'dashboard_screen.dart';
 
 class HomeWelcomeScreen extends StatefulWidget {
   const HomeWelcomeScreen({super.key});
@@ -57,7 +57,7 @@ class _HomeWelcomeScreenState extends State<HomeWelcomeScreen>
     Future.delayed(const Duration(seconds: 3), () {
       if (mounted) {
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const ProgramListScreen()),
+          MaterialPageRoute(builder: (_) => const DashboardScreen()),
         );
       }
     });

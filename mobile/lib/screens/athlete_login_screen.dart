@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
-import 'program_list_screen.dart';
+import 'dashboard_screen.dart';
 import 'forgot_password_screen.dart';
 import 'athlete_join_screen.dart';
 import 'athlete_signup_screen.dart';
-import 'program_list_screen.dart';
 
 class AthleteLoginScreen extends StatefulWidget {
   const AthleteLoginScreen({super.key});
@@ -69,7 +68,7 @@ class _AthleteLoginScreenState extends State<AthleteLoginScreen> {
 
       if (mounted) {
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const ProgramListScreen()),
+          MaterialPageRoute(builder: (_) => const DashboardScreen()),
         );
       }
     } catch (e) {
@@ -359,7 +358,7 @@ class _AthleteLoginScreenState extends State<AthleteLoginScreen> {
                   final appProvider = Provider.of<AppProvider>(context, listen: false);
                   appProvider.setAuthenticated(true, userName: 'Guest (Dev)');
                   Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(builder: (_) => const ProgramListScreen()),
+                    MaterialPageRoute(builder: (_) => const DashboardScreen()),
                   );
                 },
                 child: const Text(
