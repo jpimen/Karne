@@ -127,9 +127,29 @@ const emptyRow = (index) => ({
 })
 
 const initialWeeks = [
-  { title: 'WEEK 1', rows: [...sampleRows, ...Array.from({ length: 10 }, (_, index) => emptyRow(index + 1))] },
-  { title: 'WEEK 2', rows: Array.from({ length: 15 }, (_, index) => emptyRow(index + 1)) },
-  { title: 'WEEK 3', rows: Array.from({ length: 15 }, (_, index) => emptyRow(index + 1)) },
+  {
+    title: 'WEEK 1',
+    days: [
+      { title: 'DAY 1', rows: [...sampleRows, ...Array.from({ length: 10 }, (_, index) => emptyRow(index + 1))] },
+      { title: 'DAY 2', rows: Array.from({ length: 15 }, (_, index) => emptyRow(index + 1)) },
+      { title: 'DAY 3', rows: Array.from({ length: 15 }, (_, index) => emptyRow(index + 1)) },
+      { title: 'DAY 4', rows: Array.from({ length: 15 }, (_, index) => emptyRow(index + 1)) },
+    ],
+  },
+  {
+    title: 'WEEK 2',
+    days: Array.from({ length: 4 }, (_, i) => ({
+      title: `DAY ${i + 1}`,
+      rows: Array.from({ length: 15 }, (_, index) => emptyRow(index + 1)),
+    })),
+  },
+  {
+    title: 'WEEK 3',
+    days: Array.from({ length: 4 }, (_, i) => ({
+      title: `DAY ${i + 1}`,
+      rows: Array.from({ length: 15 }, (_, index) => emptyRow(index + 1)),
+    })),
+  },
 ]
 
 function parseLoadToKg(load) {
@@ -154,6 +174,7 @@ function ProgramBuilder() {
   })
   const [weeks, setWeeks] = useState(initialWeeks)
   const [activeWeek, setActiveWeek] = useState(0)
+  const [activeDay, setActiveDay] = useState(0)
   const [selectedRowId, setSelectedRowId] = useState('row-1')
   const [customColumns, setCustomColumns] = useState([])
   const [columnHeaders, setColumnHeaders] = useState(columnOptions)
@@ -167,6 +188,7 @@ function ProgramBuilder() {
   }, [toast])
 
   const activeWeekData = weeks[activeWeek]
+  const activeDayData = activeWeekData.days[activeDay]
 
   const updateCell = (rowId, field, value) => {
     setWeeks((prev) =>
@@ -174,28 +196,40 @@ function ProgramBuilder() {
         if (weekIndex !== activeWeek) return week
         return {
           ...week,
-          rows: week.rows.map((row) => (row.id === rowId ? { ...row, [field]: value } : row)),
+          days: week.days.map((day, dayIndex) => {
+            if (dayIndex !== activeDay) return day
+            return {
+              ...day,
+              rows: day.rows.map((row) => (row.id === rowId ? { ...row, [field]: value } : row)),
+            }
+          }),
         }
       }),
     )
   }
 
-  const selectedRowIndex = activeWeekData.rows.findIndex((row) => row.id === selectedRowId)
+  const selectedRowIndex = activeDayData.rows.findIndex((row) => row.id === selectedRowId)
 
   const addRow = (position = 'bottom') => {
     setWeeks((prev) =>
       prev.map((week, weekIndex) => {
         if (weekIndex !== activeWeek) return week
-        const rows = [...week.rows]
-        const newRow = emptyRow(rows.length + 1)
-        if (position === 'above' && selectedRowIndex !== -1) {
-          rows.splice(selectedRowIndex, 0, newRow)
-        } else if (position === 'below' && selectedRowIndex !== -1) {
-          rows.splice(selectedRowIndex + 1, 0, newRow)
-        } else {
-          rows.push(newRow)
+        return {
+          ...week,
+          days: week.days.map((day, dayIndex) => {
+            if (dayIndex !== activeDay) return day
+            const rows = [...day.rows]
+            const newRow = emptyRow(rows.length + 1)
+            if (position === 'above' && selectedRowIndex !== -1) {
+              rows.splice(selectedRowIndex, 0, newRow)
+            } else if (position === 'below' && selectedRowIndex !== -1) {
+              rows.splice(selectedRowIndex + 1, 0, newRow)
+            } else {
+              rows.push(newRow)
+            }
+            return { ...day, rows }
+          }),
         }
-        return { ...week, rows }
       }),
     )
     setSelectedRowId(`empty-${Date.now()}-added`)
@@ -206,10 +240,16 @@ function ProgramBuilder() {
     setWeeks((prev) =>
       prev.map((week, weekIndex) => {
         if (weekIndex !== activeWeek) return week
-        return { ...week, rows: week.rows.filter((row) => row.id !== selectedRowId) }
+        return {
+          ...week,
+          days: week.days.map((day, dayIndex) => {
+            if (dayIndex !== activeDay) return day
+            return { ...day, rows: day.rows.filter((row) => row.id !== selectedRowId) }
+          }),
+        }
       }),
     )
-    setSelectedRowId(activeWeekData.rows[0]?.id || '')
+    setSelectedRowId(activeDayData.rows[0]?.id || '')
   }
 
   const addNewCycle = () => {
@@ -218,13 +258,35 @@ function ProgramBuilder() {
         ...prev,
         {
           title: `WEEK ${prev.length + 1}`,
-          rows: Array.from({ length: 15 }, (_, index) => emptyRow(index + 1)),
+          days: Array.from({ length: 4 }, (_, i) => ({
+            title: `DAY ${i + 1}`,
+            rows: Array.from({ length: 15 }, (_, index) => emptyRow(index + 1)),
+          })),
         },
       ]
       setActiveWeek(nextWeeks.length - 1)
+      setActiveDay(0)
       return nextWeeks
     })
     setToast('Week added')
+  }
+
+  const addNewDay = () => {
+    setWeeks((prev) =>
+      prev.map((week, index) => {
+        if (index !== activeWeek) return week
+        const nextDays = [
+          ...week.days,
+          {
+            title: `DAY ${week.days.length + 1}`,
+            rows: Array.from({ length: 15 }, (_, index) => emptyRow(index + 1)),
+          },
+        ]
+        return { ...week, days: nextDays }
+      }),
+    )
+    setActiveDay(activeWeekData.days.length)
+    setToast('Day added')
   }
 
   const deleteWeek = () => {
@@ -237,6 +299,7 @@ function ProgramBuilder() {
       const nextWeeks = prev.filter((_, index) => index !== activeWeek)
       const nextActive = Math.max(0, Math.min(activeWeek, nextWeeks.length - 1))
       setActiveWeek(nextActive)
+      setActiveDay(0)
       return nextWeeks
     })
     setToast('Week deleted')
@@ -250,7 +313,10 @@ function ProgramBuilder() {
     setWeeks((prev) =>
       prev.map((week) => ({
         ...week,
-        rows: week.rows.map((row) => ({ ...row, [newColumn.id]: '' })),
+        days: week.days.map((day) => ({
+          ...day,
+          rows: day.rows.map((row) => ({ ...row, [newColumn.id]: '' })),
+        })),
       })),
     )
     setToast(`${newColumn.label} added`)
@@ -339,7 +405,7 @@ function ProgramBuilder() {
   }
 
   const cycleIntensity = (rowId) => {
-    const row = activeWeekData.rows.find((item) => item.id === rowId)
+    const row = activeDayData.rows.find((item) => item.id === rowId)
     if (!row) return
     const nextIndex = (intensityOrder.indexOf(row.intensity) + 1) % intensityOrder.length
     updateCell(rowId, 'intensity', intensityOrder[nextIndex])
@@ -347,34 +413,32 @@ function ProgramBuilder() {
 
   const totalVolume = useMemo(
     () =>
-      activeWeekData.rows.reduce((sum, row) => {
+      activeDayData.rows.reduce((sum, row) => {
         const sets = Number(row.sets)
         const reps = Number(row.reps)
         const kg = parseLoadToKg(row.load)
         if (!sets || !reps || !kg) return sum
         return sum + sets * reps * kg
-      },
-    0),
-    [activeWeekData.rows],
-  )
+      }, 0),
+    [activeDayData.rows],
+)
 
   const estimatedDuration = useMemo(
     () =>
-      activeWeekData.rows.reduce((sum, row) => {
+      activeDayData.rows.reduce((sum, row) => {
         const sets = Number(row.sets)
         const rest = Number(row.rest)
         if (!sets) return sum
         return sum + sets * 45 + (rest || 0)
-      },
-    0),
-    [activeWeekData.rows],
-  )
+      }, 0),
+    [activeDayData.rows],
+)
 
   const saveProgram = () => setToast('Program saved successfully')
 
   const exportCsv = () => {
     const header = ['Row', 'EXERCISE', 'SETS', 'REPS', 'LOAD (%/KG)', 'RPE', 'INTENSITY', 'REST (S)', 'NOTES']
-    const rows = activeWeekData.rows.map((row, index) => [
+    const rows = activeDayData.rows.map((row, index) => [
       index + 1,
       row.exercise,
       row.sets,
@@ -391,7 +455,7 @@ function ProgramBuilder() {
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
     const link = document.createElement('a')
     link.href = URL.createObjectURL(blob)
-    link.download = `${activeWeekData.title.replace(/\s+/g, '_')}.csv`
+    link.download = `${activeWeekData.title}_${activeDayData.title}.csv`
     link.click()
     setToast('Export complete')
   }
@@ -517,12 +581,15 @@ function ProgramBuilder() {
               <button onClick={deleteWeek} className="rounded-3xl border border-zinc-700 bg-[#111111] px-5 py-3 text-sm uppercase tracking-[0.2em] text-zinc-200 transition hover:border-red-500 hover:text-red-400">DELETE</button>
             </div>
           </div>
-          <div className="mt-4 overflow-x-auto pt-4">
+          <div className="mt-4 overflow-x-auto border-b border-zinc-800 pb-4 pt-4">
             <div className="flex min-w-max gap-3 text-sm uppercase tracking-[0.25em]">
               {weeks.map((week, index) => (
                 <button
                   key={week.title}
-                  onClick={() => setActiveWeek(index)}
+                  onClick={() => {
+                    setActiveWeek(index)
+                    setActiveDay(0)
+                  }}
                   className={`rounded-full px-5 py-3 transition ${
                     index === activeWeek ? 'bg-[#161616] text-gold ring-1 ring-gold' : 'bg-[#111111] text-zinc-400 hover:bg-[#1c1c1c]'
                   }`}
@@ -530,6 +597,28 @@ function ProgramBuilder() {
                   {week.title}
                 </button>
               ))}
+            </div>
+          </div>
+
+          <div className="mt-4 overflow-x-auto pt-4">
+            <div className="flex min-w-max items-center gap-3 text-sm uppercase tracking-[0.25em]">
+              {activeWeekData.days.map((day, index) => (
+                <button
+                  key={day.title}
+                  onClick={() => setActiveDay(index)}
+                  className={`rounded-full px-5 py-3 transition ${
+                    index === activeDay ? 'bg-[#161616] text-gold ring-1 ring-gold' : 'bg-[#111111] text-zinc-400 hover:bg-[#1c1c1c]'
+                  }`}
+                >
+                  {day.title}
+                </button>
+              ))}
+              <button
+                onClick={addNewDay}
+                className="rounded-full bg-[#111111] px-5 py-3 text-gold transition hover:bg-[#1c1c1c]"
+              >
+                + ADD DAY
+              </button>
             </div>
           </div>
 
@@ -571,7 +660,7 @@ function ProgramBuilder() {
                 </tr>
               </thead>
               <tbody>
-                {activeWeekData.rows.map((row, rowIndex) => {
+                {activeDayData.rows.map((row, rowIndex) => {
                   const isSelected = row.id === selectedRowId
                   return (
                     <tr
