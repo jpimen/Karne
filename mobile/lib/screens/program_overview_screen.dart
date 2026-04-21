@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/api_models.dart';
-import 'program_detail_screen.dart';
+import 'week_days_screen.dart';
 
 class ProgramOverviewScreen extends StatelessWidget {
   final TrainingProgram program;
@@ -144,7 +144,7 @@ class ProgramOverviewScreen extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => ProgramDetailScreen(
+                        builder: (context) => WeekDaysScreen(
                           program: program,
                           selectedWeek: weekNum,
                         ),

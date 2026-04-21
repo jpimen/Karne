@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../models/api_models.dart';
+
 class WorkoutLogView extends StatefulWidget {
-  const WorkoutLogView({super.key});
+  final TrainingDay trainingDay;
+  const WorkoutLogView({super.key, required this.trainingDay});
 
   @override
   State<WorkoutLogView> createState() => _WorkoutLogViewState();
@@ -19,9 +22,10 @@ class _WorkoutLogViewState extends State<WorkoutLogView> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Title
-        const Text(
-          'CURRENT SESSION',
-          style: TextStyle(
+        // Title
+        Text(
+          widget.trainingDay.dayLabel.toUpperCase(),
+          style: const TextStyle(
             color: Colors.grey,
             fontSize: 10,
             fontWeight: FontWeight.bold,
@@ -58,22 +62,24 @@ class _WorkoutLogViewState extends State<WorkoutLogView> {
                 ),
               ),
               // Table Body Rows
-              ExerciseRow(
-                name: 'BACK\nSQUAT', detail: 'Low Bar', rpe: '8.5', reps: '5', load: '140kg', initialTotal: '700',
-                onTotalChanged: (val) => setState(() => _squatTotal = val),
-              ),
-              ExerciseRow(
-                name: 'BENCH\nPRESS', detail: 'Comp Width', rpe: '8.0', reps: '5', load: '100kg', initialTotal: '500',
-                onTotalChanged: (val) => setState(() => _benchTotal = val),
-              ),
-              ExerciseRow(
-                name: 'DEADLIFT', detail: 'Conventional', rpe: '9.0', reps: '3', load: '180kg', initialTotal: '540',
-                onTotalChanged: (val) => setState(() => _deadliftTotal = val),
-              ),
-              ExerciseRow(
-                name: 'OHP', detail: 'Strict', rpe: '7.5', reps: '8', load: '60kg', initialTotal: '480', isLast: true,
-                onTotalChanged: (val) {}, // No volume card for OHP
-              ),
+              ...widget.trainingDay.exercises.asMap().entries.map((entry) {
+                final index = entry.key;
+                final exercise = entry.value;
+                final isLast = index == widget.trainingDay.exercises.length - 1;
+
+                return ExerciseRow(
+                  name: exercise.exercise.name.toUpperCase(),
+                  detail: exercise.exercise.category ?? '',
+                  rpe: '8.0', // Target RPE could be added to model
+                  reps: exercise.reps,
+                  load: '${exercise.targetWeight}kg',
+                  initialTotal: (exercise.sets * exercise.targetWeight).toStringAsFixed(0),
+                  isLast: isLast,
+                  onTotalChanged: (val) {
+                    // Update volume totals based on muscle group or exercise name
+                  },
+                );
+              }),
               
               // Add Button
               Padding(

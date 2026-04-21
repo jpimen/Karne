@@ -5,8 +5,14 @@ import 'workout_log_view.dart';
 class ProgramDetailScreen extends StatelessWidget {
   final TrainingProgram program;
   final int selectedWeek;
+  final TrainingDay selectedDay;
 
-  const ProgramDetailScreen({super.key, required this.program, required this.selectedWeek});
+  const ProgramDetailScreen({
+    super.key,
+    required this.program,
+    required this.selectedWeek,
+    required this.selectedDay,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -120,7 +126,7 @@ class ProgramDetailScreen extends StatelessWidget {
               const SizedBox(height: 24),
 
               // Embedded Workout Log Spreadsheet View
-              const WorkoutLogView(),
+              WorkoutLogView(trainingDay: selectedDay),
             ],
           ),
         ),

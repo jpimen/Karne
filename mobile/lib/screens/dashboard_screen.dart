@@ -53,6 +53,78 @@ class _DashboardScreenState extends State<DashboardScreen>
     _loadData();
   }
 
+  void _showGetLinkDialog() {
+    const appLink = 'https://thelaboratory.app/join';
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: const Color(0xFF1C1C1E),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.link_rounded, color: _gold, size: 20),
+            SizedBox(width: 8),
+            Text('GET LINK', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Share this link to invite others:', style: TextStyle(color: Colors.white54, fontSize: 13)),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF111111),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: _gold.withValues(alpha: 0.4)),
+              ),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: Text(appLink, style: TextStyle(color: _gold, fontSize: 13)),
+                  ),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: const Text('Link copied to clipboard!'),
+                          backgroundColor: _gold,
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                      );
+                    },
+                    child: const Icon(Icons.copy_rounded, color: _gold, size: 18),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('CLOSE', style: TextStyle(color: Colors.white38, letterSpacing: 1)),
+          ),
+          ElevatedButton.icon(
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(Icons.share_rounded, size: 16),
+            label: const Text('SHARE'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _gold,
+              foregroundColor: Colors.black,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _loadData() async {
     final api = context.read<AppProvider>().apiService;
     try {
@@ -167,9 +239,26 @@ class _DashboardScreenState extends State<DashboardScreen>
         ),
       ),
       actions: [
-        IconButton(
-          icon: Icon(Icons.notifications_outlined, color: Colors.white70),
-          onPressed: () {},
+        Padding(
+          padding: const EdgeInsets.only(right: 12, top: 8, bottom: 8),
+          child: TextButton.icon(
+            onPressed: _showGetLinkDialog,
+            icon: const Icon(Icons.link_rounded, size: 16, color: Colors.black),
+            label: const Text(
+              'GET LINK',
+              style: TextStyle(
+                color: Colors.black,
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1,
+              ),
+            ),
+            style: TextButton.styleFrom(
+              backgroundColor: _gold,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            ),
+          ),
         ),
       ],
     );
@@ -245,23 +334,24 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   Widget _statCard(String label, String value, IconData icon, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
       decoration: BoxDecoration(
         color: _card,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: _cardBorder),
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: color, size: 20),
-          SizedBox(height: 8),
+          Icon(icon, color: color, size: 18),
+          SizedBox(height: 6),
           Text(value,
               style: TextStyle(
-                  color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+                  color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
           SizedBox(height: 2),
           Text(label,
-              style: TextStyle(color: Colors.white38, fontSize: 9, letterSpacing: 1.2)),
+              style: TextStyle(color: Colors.white38, fontSize: 8, letterSpacing: 1.1)),
         ],
       ),
     );
@@ -368,28 +458,29 @@ class _DashboardScreenState extends State<DashboardScreen>
       shrinkWrap: true,
       physics: NeverScrollableScrollPhysics(),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2, crossAxisSpacing: 10, mainAxisSpacing: 10, childAspectRatio: 1.8),
+          crossAxisCount: 2, crossAxisSpacing: 10, mainAxisSpacing: 10, childAspectRatio: 2.2),
       itemCount: metrics.length,
       itemBuilder: (_, i) {
         final m = metrics[i];
         return Container(
-          padding: EdgeInsets.all(14),
+          padding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(
             color: _card,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(color: _cardBorder),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Icon(m['icon'] as IconData, color: _gold, size: 20),
+              Icon(m['icon'] as IconData, color: _gold, size: 22),
+              SizedBox(width: 10),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(m['weight'] as String,
                       style: TextStyle(
-                          color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                          color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
                   Text(m['lift'] as String,
                       style: TextStyle(color: Colors.white38, fontSize: 10, letterSpacing: 1.2)),
                 ],
@@ -415,7 +506,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       shrinkWrap: true,
       physics: NeverScrollableScrollPhysics(),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 3, crossAxisSpacing: 8, mainAxisSpacing: 8, childAspectRatio: 1.4),
+          crossAxisCount: 3, crossAxisSpacing: 8, mainAxisSpacing: 8, childAspectRatio: 1.5),
       itemCount: groups.length,
       itemBuilder: (_, i) {
         final g = groups[i];
