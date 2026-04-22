@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import AppShell from '../components/AppShell'
+import { AppShell } from '../components'
 
 const intensityOrder = ['PEAK', 'HIGH', 'MED', 'MAX', 'LOW']
 
@@ -190,6 +190,14 @@ function ProgramBuilder() {
   const activeWeekData = weeks[activeWeek]
   const activeDayData = activeWeekData.days[activeDay]
 
+  const getGlobalDayNumber = (weekIdx, dayIdx) => {
+    let dayCount = 0
+    for (let i = 0; i < weekIdx; i++) {
+      dayCount += weeks[i].days.length
+    }
+    return dayCount + dayIdx + 1
+  }
+
   const updateCell = (rowId, field, value) => {
     setWeeks((prev) =>
       prev.map((week, weekIndex) => {
@@ -258,10 +266,13 @@ function ProgramBuilder() {
         ...prev,
         {
           title: `WEEK ${prev.length + 1}`,
-          days: Array.from({ length: 4 }, (_, i) => ({
-            title: `DAY ${i + 1}`,
-            rows: Array.from({ length: 15 }, (_, index) => emptyRow(index + 1)),
-          })),
+          days: Array.from({ length: 4 }, (_, i) => {
+            const globalDayIdx = prev.reduce((sum, w) => sum + w.days.length, 0) + i + 1
+            return {
+              title: `DAY ${globalDayIdx}`,
+              rows: Array.from({ length: 15 }, (_, index) => emptyRow(index + 1)),
+            }
+          }),
         },
       ]
       setActiveWeek(nextWeeks.length - 1)
@@ -275,17 +286,18 @@ function ProgramBuilder() {
     setWeeks((prev) =>
       prev.map((week, index) => {
         if (index !== activeWeek) return week
+        const globalDayIdx = prev.slice(0, index + 1).reduce((sum, w) => sum + w.days.length, 0) + 1
         const nextDays = [
           ...week.days,
           {
-            title: `DAY ${week.days.length + 1}`,
+            title: `DAY ${globalDayIdx}`,
             rows: Array.from({ length: 15 }, (_, index) => emptyRow(index + 1)),
           },
         ]
         return { ...week, days: nextDays }
       }),
     )
-    setActiveDay(activeWeekData.days.length)
+    setActiveDay(weeks[activeWeek].days.length)
     setToast('Day added')
   }
 
@@ -303,6 +315,26 @@ function ProgramBuilder() {
       return nextWeeks
     })
     setToast('Week deleted')
+  }
+
+  const deleteDay = () => {
+    if (weeks[activeWeek].days.length <= 1) {
+      setToast('At least one day is required')
+      return
+    }
+
+    setWeeks((prev) => {
+      const weekToUpdate = prev[activeWeek]
+      const nextDays = weekToUpdate.days.filter((_, idx) => idx !== activeDay)
+      const nextWeeks = prev.map((week, index) =>
+        index === activeWeek ? { ...week, days: nextDays } : week,
+      )
+
+      const nextActiveDay = Math.max(0, Math.min(activeDay, nextDays.length - 1))
+      setActiveDay(nextActiveDay)
+      return nextWeeks
+    })
+    setToast('Day deleted')
   }
 
   const addColumn = () => {
@@ -438,6 +470,7 @@ function ProgramBuilder() {
 
   const exportCsv = () => {
     const header = ['Row', 'EXERCISE', 'SETS', 'REPS', 'LOAD (%/KG)', 'RPE', 'INTENSITY', 'REST (S)', 'NOTES']
+    const dayTitle = `DAY ${getGlobalDayNumber(activeWeek, activeDay)}`
     const rows = activeDayData.rows.map((row, index) => [
       index + 1,
       row.exercise,
@@ -455,7 +488,7 @@ function ProgramBuilder() {
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
     const link = document.createElement('a')
     link.href = URL.createObjectURL(blob)
-    link.download = `${activeWeekData.title}_${activeDayData.title}.csv`
+    link.download = `${activeWeekData.title}_${dayTitle}.csv`
     link.click()
     setToast('Export complete')
   }
@@ -566,7 +599,7 @@ function ProgramBuilder() {
         </div>
 
         <div className="mb-6 overflow-hidden rounded-[2rem] border border-zinc-800 bg-[#121212] p-5">
-          <div className="flex w-full items-center justify-between gap-3 overflow-hidden">
+          <div className="flex w-full items-center gap-3 overflow-hidden">
             <div className="min-w-0 overflow-x-auto">
               <div className="flex min-w-max items-center gap-3 text-sm uppercase tracking-[0.25em] text-zinc-300">
                 <span className="rounded-3xl border border-zinc-700 bg-[#111111] px-4 py-3">ROW ACTIONS</span>
@@ -576,49 +609,51 @@ function ProgramBuilder() {
                 <button onClick={addColumn} className="rounded-3xl border border-zinc-700 bg-[#111111] px-4 py-3 text-sm uppercase tracking-[0.2em] text-zinc-200 hover:border-gold hover:text-gold">ADD COLUMN</button>
               </div>
             </div>
-            <div className="flex flex-wrap items-center gap-3">
-              <button onClick={addNewCycle} className="rounded-3xl bg-gold px-5 py-3 text-sm font-bold uppercase tracking-[0.2em] text-black transition hover:bg-yellow-500">ADD</button>
-              <button onClick={deleteWeek} className="rounded-3xl border border-zinc-700 bg-[#111111] px-5 py-3 text-sm uppercase tracking-[0.2em] text-zinc-200 transition hover:border-red-500 hover:text-red-400">DELETE</button>
-            </div>
           </div>
           <div className="mt-4 overflow-x-auto border-b border-zinc-800 pb-4 pt-4">
-            <div className="flex min-w-max gap-3 text-sm uppercase tracking-[0.25em]">
-              {weeks.map((week, index) => (
-                <button
-                  key={week.title}
-                  onClick={() => {
-                    setActiveWeek(index)
-                    setActiveDay(0)
-                  }}
-                  className={`rounded-full px-5 py-3 transition ${
-                    index === activeWeek ? 'bg-[#161616] text-gold ring-1 ring-gold' : 'bg-[#111111] text-zinc-400 hover:bg-[#1c1c1c]'
-                  }`}
-                >
-                  {week.title}
-                </button>
-              ))}
+            <div className="flex min-w-max items-center justify-between gap-3">
+              <div className="flex gap-3 text-sm uppercase tracking-[0.25em]">
+                {weeks.map((week, index) => (
+                  <button
+                    key={week.title}
+                    onClick={() => {
+                      setActiveWeek(index)
+                      setActiveDay(0)
+                    }}
+                    className={`rounded-full px-5 py-3 transition ${
+                      index === activeWeek ? 'bg-[#161616] text-gold ring-1 ring-gold' : 'bg-[#111111] text-zinc-400 hover:bg-[#1c1c1c]'
+                    }`}
+                  >
+                    {week.title}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-3">
+                <button onClick={addNewCycle} className="rounded-3xl bg-gold px-5 py-3 text-sm font-bold uppercase tracking-[0.2em] text-black transition hover:bg-yellow-500">ADD</button>
+                <button onClick={deleteWeek} className="rounded-3xl border border-zinc-700 bg-[#111111] px-5 py-3 text-sm uppercase tracking-[0.2em] text-zinc-200 transition hover:border-red-500 hover:text-red-400">DELETE</button>
+              </div>
             </div>
           </div>
 
           <div className="mt-4 overflow-x-auto pt-4">
-            <div className="flex min-w-max items-center gap-3 text-sm uppercase tracking-[0.25em]">
-              {activeWeekData.days.map((day, index) => (
-                <button
-                  key={day.title}
-                  onClick={() => setActiveDay(index)}
-                  className={`rounded-full px-5 py-3 transition ${
-                    index === activeDay ? 'bg-[#161616] text-gold ring-1 ring-gold' : 'bg-[#111111] text-zinc-400 hover:bg-[#1c1c1c]'
-                  }`}
-                >
-                  {day.title}
-                </button>
-              ))}
-              <button
-                onClick={addNewDay}
-                className="rounded-full bg-[#111111] px-5 py-3 text-gold transition hover:bg-[#1c1c1c]"
-              >
-                + ADD DAY
-              </button>
+            <div className="flex min-w-max items-center justify-between gap-3">
+              <div className="flex items-center gap-3 text-sm uppercase tracking-[0.25em]">
+                {activeWeekData.days.map((day, index) => (
+                  <button
+                    key={`${activeWeek}-${index}`}
+                    onClick={() => setActiveDay(index)}
+                    className={`rounded-full px-5 py-3 transition ${
+                      index === activeDay ? 'bg-[#161616] text-gold ring-1 ring-gold' : 'bg-[#111111] text-zinc-400 hover:bg-[#1c1c1c]'
+                    }`}
+                  >
+                    DAY {getGlobalDayNumber(activeWeek, index)}
+                  </button>
+                ))}
+              </div>
+              <div className="flex items-center gap-3">
+                <button onClick={addNewDay} className="rounded-3xl bg-gold px-5 py-3 text-sm font-bold uppercase tracking-[0.2em] text-black transition hover:bg-yellow-500">ADD</button>
+                <button onClick={deleteDay} className="rounded-3xl border border-zinc-700 bg-[#111111] px-5 py-3 text-sm uppercase tracking-[0.2em] text-zinc-200 transition hover:border-red-500 hover:text-red-400">DELETE</button>
+              </div>
             </div>
           </div>
 

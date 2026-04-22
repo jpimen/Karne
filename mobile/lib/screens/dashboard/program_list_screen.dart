@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../models/api_models.dart';
-import '../providers/app_provider.dart';
-import 'program_overview_screen.dart';
+import '../../models/index.dart';
+import '../../providers/index.dart';
+import '../index.dart';
 
 class ProgramListScreen extends StatefulWidget {
   const ProgramListScreen({super.key});
@@ -309,3 +309,5 @@ class _ProgramCard extends StatelessWidget {
     }
   }
 }
+
+

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../models/api_models.dart';
-import 'week_days_screen.dart';
+import '../../models/index.dart';
+import '../index.dart';
 
 class ProgramOverviewScreen extends StatelessWidget {
   final TrainingProgram program;
@@ -210,3 +210,5 @@ class ProgramOverviewScreen extends StatelessWidget {
     return '${date.month}/${date.day}/${date.year}';
   }
 }
+
+

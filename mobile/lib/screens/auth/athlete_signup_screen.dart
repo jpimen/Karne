@@ -2,21 +2,17 @@ import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
-import '../providers/app_provider.dart';
-import 'athlete_login_screen.dart';
+import '../../providers/index.dart';
+import '../index.dart';
 
-class AthleteAccountCreationScreen extends StatefulWidget {
-  final String inviteCode;
-
-  const AthleteAccountCreationScreen({super.key, required this.inviteCode});
+class AthleteSignupScreen extends StatefulWidget {
+  const AthleteSignupScreen({super.key});
 
   @override
-  State<AthleteAccountCreationScreen> createState() =>
-      _AthleteAccountCreationScreenState();
+  State<AthleteSignupScreen> createState() => _AthleteSignupScreenState();
 }
 
-class _AthleteAccountCreationScreenState
-    extends State<AthleteAccountCreationScreen> {
+class _AthleteSignupScreenState extends State<AthleteSignupScreen> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -66,7 +62,7 @@ class _AthleteAccountCreationScreenState
     });
   }
 
-  Future<void> _createProfile() async {
+  Future<void> _signup() async {
     if (_nameController.text.isEmpty ||
         _emailController.text.isEmpty ||
         _passwordController.text.isEmpty ||
@@ -124,8 +120,12 @@ class _AthleteAccountCreationScreenState
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
         title: const Text(
-          'CREATE YOUR PROFILE',
+          'SIGN UP',
           style: TextStyle(
             color: Colors.white,
             fontSize: 18,
@@ -140,21 +140,21 @@ class _AthleteAccountCreationScreenState
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             const SizedBox(height: 40),
-            // Coach name display
+            // Logo
+            const Text(
+              'THE LABORATORY',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 2.0,
+              ),
+            ),
+            const SizedBox(height: 8),
             Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1a1a1a),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Text(
-                "You're joining Coach Smith's program",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                ),
-                textAlign: TextAlign.center,
-              ),
+              width: 100,
+              height: 2,
+              color: const Color(0xFFD4A017),
             ),
             const SizedBox(height: 40),
             // Profile photo
@@ -201,7 +201,7 @@ class _AthleteAccountCreationScreenState
               controller: _nameController,
               style: const TextStyle(color: Colors.white),
               decoration: const InputDecoration(
-                labelText: 'YOUR NAME',
+                labelText: 'FULL NAME',
                 labelStyle: TextStyle(color: Colors.white70),
                 border: OutlineInputBorder(),
                 enabledBorder: OutlineInputBorder(
@@ -221,7 +221,7 @@ class _AthleteAccountCreationScreenState
               style: const TextStyle(color: Colors.white),
               keyboardType: TextInputType.emailAddress,
               decoration: const InputDecoration(
-                labelText: 'YOUR EMAIL',
+                labelText: 'EMAIL ADDRESS',
                 labelStyle: TextStyle(color: Colors.white70),
                 border: OutlineInputBorder(),
                 enabledBorder: OutlineInputBorder(
@@ -317,7 +317,7 @@ class _AthleteAccountCreationScreenState
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: _isLoading ? null : _createProfile,
+                onPressed: _isLoading ? null : _signup,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFD4A017),
                   foregroundColor: Colors.black,
@@ -329,12 +329,45 @@ class _AthleteAccountCreationScreenState
                 child: _isLoading
                     ? const CircularProgressIndicator(color: Colors.black)
                     : const Text(
-                        'CREATE MY PROFILE',
+                        'CREATE ACCOUNT',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            // Already have account
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(builder: (_) => const AthleteLoginScreen()),
+                );
+              },
+              child: const Text(
+                'ALREADY HAVE AN ACCOUNT? LOGIN',
+                style: TextStyle(
+                  color: Color(0xFFD4A017),
+                  fontSize: 14,
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            // Join with invite code
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const AthleteJoinScreen()),
+                );
+              },
+              child: const Text(
+                'JOIN WITH INVITE CODE',
+                style: TextStyle(
+                  color: Color(0xFFD4A017),
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
             const SizedBox(height: 40),
@@ -344,3 +377,4 @@ class _AthleteAccountCreationScreenState
     );
   }
 }
+

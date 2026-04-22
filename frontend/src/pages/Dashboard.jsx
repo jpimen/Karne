@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import api from '../api'
-import AppShell from '../components/AppShell'
+import api from '../utils/api'
+import { AppShell } from '../components'
 import { LineChart, Line, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 
 const metricCards = (summary, currentProgram) => [

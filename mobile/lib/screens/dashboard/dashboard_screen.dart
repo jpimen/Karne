@@ -2,9 +2,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/app_provider.dart';
-import '../models/api_models.dart';
-import 'program_list_screen.dart';
+import '../../providers/index.dart';
+import '../../models/index.dart';
+import '../index.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -686,3 +686,5 @@ class _DashboardScreenState extends State<DashboardScreen>
     return 'evening';
   }
 }
+
+

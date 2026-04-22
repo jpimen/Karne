@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/app_provider.dart';
-import 'dashboard_screen.dart';
+import '../../providers/index.dart';
+import '../index.dart';
 
 class HomeWelcomeScreen extends StatefulWidget {
   const HomeWelcomeScreen({super.key});
@@ -206,3 +206,4 @@ class _HomeWelcomeScreenState extends State<HomeWelcomeScreen>
     );
   }
 }
+

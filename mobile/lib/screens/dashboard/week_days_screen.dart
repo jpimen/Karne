@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../models/api_models.dart';
-import 'program_detail_screen.dart';
+import '../../models/index.dart';
+import '../index.dart';
 
 class WeekDaysScreen extends StatelessWidget {
   final TrainingProgram program;
@@ -185,3 +185,5 @@ class WeekDaysScreen extends StatelessWidget {
     );
   }
 }
+
+

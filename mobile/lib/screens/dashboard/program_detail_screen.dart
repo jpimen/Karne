@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../models/api_models.dart';
-import 'workout_log_view.dart';
+import '../../models/index.dart';
+import '../index.dart';
 
 class ProgramDetailScreen extends StatelessWidget {
   final TrainingProgram program;
@@ -153,4 +153,6 @@ class ProgramDetailScreen extends StatelessWidget {
     return '${date.month}/${date.day}/${date.year}';
   }
 }
+
+
 

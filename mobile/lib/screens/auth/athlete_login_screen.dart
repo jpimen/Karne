@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/app_provider.dart';
-import 'dashboard_screen.dart';
-import 'forgot_password_screen.dart';
-import 'athlete_join_screen.dart';
-import 'athlete_signup_screen.dart';
+import '../../providers/index.dart';
+import '../index.dart';
 
 class AthleteLoginScreen extends StatefulWidget {
   const AthleteLoginScreen({super.key});
@@ -377,3 +374,4 @@ class _AthleteLoginScreenState extends State<AthleteLoginScreen> {
     );
   }
 }
+

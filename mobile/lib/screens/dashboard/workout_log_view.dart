@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../models/api_models.dart';
-
+import '../../models/index.dart';
 class WorkoutLogView extends StatefulWidget {
   final TrainingDay trainingDay;
   const WorkoutLogView({super.key, required this.trainingDay});
@@ -411,3 +410,5 @@ class _ExerciseRowState extends State<ExerciseRow> {
     );
   }
 }
+
+
