@@ -1,63 +1,29 @@
-# The Laboratory
+# Karne Performance Tracking
 
-A full-stack fitness performance tracking application with web, mobile, and backend components.
+Karne is a comprehensive fitness performance tracking ecosystem consisting of a web dashboard, a mobile companion app, and a robust backend API.
 
-## Architecture
+## Project Structure
 
-- Backend: Django + Django REST Framework + PostgreSQL + JWT Authentication
-- Web: React + Vite + Tailwind CSS + Recharts
-- Mobile: Flutter + Provider + Dio + Shared Preferences
+- **[Backend](./backend/README.md)**: Django REST Framework API with PostgreSQL.
+- **[Frontend](./frontend/README.md)**: React-based web application for data visualization and management.
+- **[Mobile](./mobile/README.md)**: Flutter-based mobile app for on-the-go workout logging.
 
-## Getting Started
+## Quick Start
 
-### Backend
+To get the entire system running, follow the instructions in each subdirectory:
 
-1. Create a Python virtual environment and activate it.
-2. Install dependencies:
-   ```bash
-   pip install -r backend/requirements.txt
-   ```
-3. Create a `.env` in `backend/` and set the database and secret values.
-4. Run migrations:
-   ```bash
-   python backend/manage.py migrate
-   ```
-5. Start the server:
-   ```bash
-   python backend/manage.py runserver
-   ```
+1.  **Backend**: Follow [Backend Setup](./backend/README.md) to start the API.
+2.  **Frontend**: Follow [Frontend Setup](./frontend/README.md) to launch the web dashboard.
+3.  **Mobile**: Follow [Mobile Setup](./mobile/README.md) to run the mobile application.
 
-### Web
+## Core Features
 
-1. Install dependencies:
-   ```bash
-   cd frontend
-   npm install
-   ```
-2. Start the dev server:
-   ```bash
-   npm run dev
-   ```
+- **Program Builder**: Design complex training programs with various volume and intensity profiles.
+- **Workout Logging**: Track performance in real-time with automatic volume calculations.
+- **Progress Analytics**: Visualize strength gains and volume trends over time.
+- **Multi-platform Sync**: Seamless synchronization between web and mobile devices.
 
-### Mobile
+## Documentation
 
-1. Install Flutter SDK.
-2. From `mobile/`, run:
-   ```bash
-   flutter pub get
-   flutter run
-   ```
-
-## API Endpoints
-
-- `POST /api/auth/register/`
-- `POST /api/auth/login/`
-- `POST /api/auth/token/refresh/`
-- `GET/POST /api/programs/`
-- `GET/PUT/DELETE /api/programs/{id}/`
-- `GET/POST /api/sessions/`
-- `GET/PUT/DELETE /api/sessions/{id}/`
-- `GET/POST /api/exercises/`
-- `GET /api/analytics/weekly-volume/`
-- `GET /api/analytics/prs/`
-- `GET /api/dashboard/`
+- [Backend Auth Setup](./BACKEND_AUTH_SETUP.md)
+- [Mobile Auth Setup](./MOBILE_AUTH_SETUP.md)
