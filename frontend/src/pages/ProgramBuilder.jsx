@@ -493,6 +493,11 @@ function ProgramBuilder() {
     setToast('Export complete')
   }
 
+  const shareLink = () => {
+    navigator.clipboard.writeText(window.location.href)
+    setToast('Link copied to clipboard')
+  }
+
   const selectAthlete = (athlete) => {
     setSelectedAthlete(athlete)
     setMode('build')
@@ -589,6 +594,9 @@ function ProgramBuilder() {
           </div>
 
           <div className="flex flex-col items-start gap-3 sm:items-end">
+            <button onClick={shareLink} className="rounded-3xl border border-zinc-700 bg-[#121212] px-6 py-3 text-sm uppercase tracking-[0.2em] text-zinc-200 transition hover:border-gold hover:text-gold">
+              SHARE LINK
+            </button>
             <button onClick={saveProgram} className="rounded-3xl bg-gold px-6 py-3 text-sm font-bold uppercase tracking-[0.2em] text-black transition hover:bg-yellow-500">
               SAVE PROGRAM
             </button>
