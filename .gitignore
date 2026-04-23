@@ -29,5 +29,8 @@ build/
 android/.gradle
 ios/Pods
 
+#docs
+docs/plan.md
+
 # VS Code
 .vscode/

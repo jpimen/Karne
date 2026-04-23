@@ -98,6 +98,7 @@ class _AthleteSignupScreenState extends State<AthleteSignupScreen> {
         _nameController.text, // Using name as username for now
         _emailController.text,
         _passwordController.text,
+        role: 'client',
       );
 
       if (mounted) {

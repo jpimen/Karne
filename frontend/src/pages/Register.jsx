@@ -12,7 +12,7 @@ function Register() {
   const handleSubmit = async (event) => {
     event.preventDefault()
     try {
-      await api.post('/auth/register/', { username, email, password })
+      await api.post('/auth/register/', { username, email, password, role: 'coach' })
       setMessage('Account created successfully. Redirecting...')
       setTimeout(() => navigate('/login'), 1200)
     } catch (err) {

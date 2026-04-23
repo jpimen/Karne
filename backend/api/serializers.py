@@ -6,6 +6,7 @@ from .models import (
     LoggedSet,
     Program,
     ProgramExercise,
+    ROLE_CHOICES,
     Session,
     User,
     Week,
@@ -16,24 +17,75 @@ User = get_user_model()
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=8)
+    role = serializers.ChoiceField(choices=ROLE_CHOICES, required=False, default='client')
+    coach_join_code = serializers.CharField(write_only=True, required=False, allow_blank=True, max_length=16)
 
     class Meta:
         model = User
-        fields = ['username', 'email', 'password']
+        fields = ['username', 'email', 'password', 'role', 'coach_join_code']
+
+    def validate_coach_join_code(self, value):
+        return value.strip().upper()
+
+    def validate(self, attrs):
+        role = attrs.get('role', 'client')
+        join_code = attrs.get('coach_join_code', '')
+
+        if role == 'admin':
+            raise serializers.ValidationError({'role': 'Admin registration is not available through this endpoint.'})
+
+        if role in ['coach', 'admin'] and join_code:
+            raise serializers.ValidationError({'coach_join_code': 'Coach join code is only valid for client registration.'})
+
+        if role == 'client' and join_code:
+            try:
+                attrs['coach_user'] = User.objects.get(join_code=join_code, role__in=['coach', 'admin'])
+            except User.DoesNotExist:
+                raise serializers.ValidationError({'coach_join_code': 'Invalid coach join code.'})
+
+        return attrs
 
     def create(self, validated_data):
+        coach = validated_data.pop('coach_user', None)
+        validated_data.pop('coach_join_code', None)
         user = User.objects.create_user(
             username=validated_data['username'],
             email=validated_data.get('email'),
             password=validated_data['password'],
+            role=validated_data.get('role', 'client'),
+            coach=coach,
         )
         return user
 
 
 class UserSerializer(serializers.ModelSerializer):
+    coach_id = serializers.PrimaryKeyRelatedField(source='coach', read_only=True)
+    join_code = serializers.SerializerMethodField()
+
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'avatar', 'status', 'subscription_tier']
+        fields = ['id', 'username', 'email', 'role', 'coach_id', 'join_code', 'avatar', 'status', 'subscription_tier']
+
+    def get_join_code(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated and request.user.id == obj.id and obj.role in ['coach', 'admin']:
+            return obj.join_code
+        return None
+
+
+class JoinCoachSerializer(serializers.Serializer):
+    join_code = serializers.CharField(max_length=16)
+
+    def validate_join_code(self, value):
+        return value.strip().upper()
+
+    def validate(self, attrs):
+        join_code = attrs['join_code']
+        try:
+            attrs['coach'] = User.objects.get(join_code=join_code, role__in=['coach', 'admin'])
+        except User.DoesNotExist:
+            raise serializers.ValidationError({'join_code': 'Invalid coach join code.'})
+        return attrs
 
 
 class ProgramExerciseSerializer(serializers.ModelSerializer):
@@ -167,13 +219,30 @@ class AssignmentSerializer(serializers.ModelSerializer):
     program_id = serializers.PrimaryKeyRelatedField(source='program', queryset=Program.objects.all())
     client_id = serializers.PrimaryKeyRelatedField(
         source='client',
-        queryset=User.objects.all(),  # Temporarily allow any user as client
+        queryset=User.objects.filter(role='client'),
     )
 
     class Meta:
         model = Assignment
         fields = ['id', 'program_id', 'client_id', 'assigned_at', 'start_date']
         read_only_fields = ['assigned_at']
+
+    def validate(self, attrs):
+        request = self.context.get('request')
+        user = request.user if request else None
+        program = attrs['program']
+        client = attrs['client']
+
+        if client.role != 'client':
+            raise serializers.ValidationError({'client_id': 'Only client users can receive assignments.'})
+
+        if user and user.is_authenticated and user.role == 'coach':
+            if program.coach_id != user.id:
+                raise serializers.ValidationError({'program_id': 'You may only assign programs you own.'})
+            if client.coach_id and client.coach_id != user.id:
+                raise serializers.ValidationError({'client_id': 'This client belongs to a different coach.'})
+
+        return attrs
 
 
 class LoggedSetSerializer(serializers.ModelSerializer):

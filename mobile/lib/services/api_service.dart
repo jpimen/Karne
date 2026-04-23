@@ -70,11 +70,25 @@ class ApiService {
     String username,
     String email,
     String password,
+    {
+    String role = 'client',
+    String? coachJoinCode,
+    }
   ) async {
     try {
+      final payload = {
+        'username': username,
+        'email': email,
+        'password': password,
+        'role': role,
+      };
+      if (coachJoinCode != null && coachJoinCode.trim().isNotEmpty) {
+        payload['coach_join_code'] = coachJoinCode.trim().toUpperCase();
+      }
+
       final response = await _dio.post(
         '/auth/register/',
-        data: {'username': username, 'email': email, 'password': password},
+        data: payload,
       );
       return response.data;
     } catch (e) {
