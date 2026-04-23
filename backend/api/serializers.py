@@ -1,8 +1,10 @@
 from rest_framework import serializers
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.contrib.auth import get_user_model
 from .models import (
     Assignment,
     Day,
+    DeviceToken,
     LoggedSet,
     Program,
     ProgramExercise,
@@ -86,6 +88,54 @@ class JoinCoachSerializer(serializers.Serializer):
         except User.DoesNotExist:
             raise serializers.ValidationError({'join_code': 'Invalid coach join code.'})
         return attrs
+
+
+class DeviceTokenUpsertSerializer(serializers.Serializer):
+    token = serializers.CharField(max_length=255)
+    platform = serializers.ChoiceField(choices=DeviceToken._meta.get_field('platform').choices)
+
+    def validate_token(self, value):
+        normalized_value = value.strip()
+        if not normalized_value:
+            raise serializers.ValidationError('Token cannot be blank.')
+        return normalized_value
+
+    def create(self, validated_data):
+        user = self.context['request'].user
+        return DeviceToken.upsert_for_user(
+            user=user,
+            token=validated_data['token'],
+            platform=validated_data['platform'],
+        )
+
+
+class AuthTokenObtainPairSerializer(TokenObtainPairSerializer):
+    device_token = serializers.CharField(required=False, write_only=True, max_length=255)
+    device_platform = serializers.ChoiceField(
+        required=False,
+        write_only=True,
+        choices=DeviceToken._meta.get_field('platform').choices,
+    )
+
+    def validate(self, attrs):
+        device_token = attrs.pop('device_token', None)
+        device_platform = attrs.pop('device_platform', None)
+
+        if bool(device_token) != bool(device_platform):
+            raise serializers.ValidationError(
+                {'device_token': 'Both device_token and device_platform are required together.'}
+            )
+
+        data = super().validate(attrs)
+
+        if device_token and device_platform:
+            DeviceToken.upsert_for_user(
+                user=self.user,
+                token=device_token,
+                platform=device_platform,
+            )
+
+        return data
 
 
 class ProgramExerciseSerializer(serializers.ModelSerializer):

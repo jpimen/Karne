@@ -3,10 +3,48 @@ from datetime import timedelta
 from django.db import transaction
 
 from api.models import Day, ExerciseSnapshot, WorkoutPlan, WorkoutSession
+from api.signals import assignment_push_requested
 
 
 class AssignmentError(ValueError):
     pass
+
+
+def _build_assignment_push_payload(*, workout_plan, client, program):
+    first_session = workout_plan.sessions.order_by('scheduled_date', 'id').first()
+    deep_link = f'/session/{first_session.id}' if first_session else None
+    return {
+        'notification': {
+            'title': 'New training plan assigned',
+            'body': f'{program.name} is now available in your app.',
+        },
+        'data': {
+            'event': 'assignment.created',
+            'workout_plan_id': str(workout_plan.id),
+            'program_id': str(program.id),
+            'client_id': str(client.id),
+            'first_session_id': str(first_session.id) if first_session else None,
+            'deep_link': deep_link,
+        },
+    }
+
+
+def _enqueue_assignment_notification_after_commit(*, workout_plan, client, program):
+    payload = _build_assignment_push_payload(
+        workout_plan=workout_plan,
+        client=client,
+        program=program,
+    )
+
+    def _enqueue():
+        assignment_push_requested.send(
+            sender=WorkoutPlan,
+            recipient_id=client.id,
+            notification_type='assignment_created',
+            payload=payload,
+        )
+
+    transaction.on_commit(_enqueue)
 
 
 def _validate_assignment(coach, client, program):
@@ -86,28 +124,40 @@ def _create_plan_for_client(*, coach, client, program, start_date):
     return workout_plan
 
 
-def assign_program_to_client(*, coach, client, program, start_date):
+def assign_program_to_client(*, coach, client, program, start_date, enqueue_notification=True):
     _validate_assignment(coach, client, program)
     with transaction.atomic():
-        return _create_plan_for_client(
+        workout_plan = _create_plan_for_client(
             coach=coach,
             client=client,
             program=program,
             start_date=start_date,
         )
+        if enqueue_notification:
+            _enqueue_assignment_notification_after_commit(
+                workout_plan=workout_plan,
+                client=client,
+                program=program,
+            )
+        return workout_plan
 
 
-def assign_program_to_clients(*, coach, clients, program, start_date):
+def assign_program_to_clients(*, coach, clients, program, start_date, enqueue_notification=True):
     workout_plans = []
     with transaction.atomic():
         for client in clients:
             _validate_assignment(coach, client, program)
-            workout_plans.append(
-                _create_plan_for_client(
-                    coach=coach,
+            workout_plan = _create_plan_for_client(
+                coach=coach,
+                client=client,
+                program=program,
+                start_date=start_date,
+            )
+            workout_plans.append(workout_plan)
+            if enqueue_notification:
+                _enqueue_assignment_notification_after_commit(
+                    workout_plan=workout_plan,
                     client=client,
                     program=program,
-                    start_date=start_date,
                 )
-            )
     return workout_plans

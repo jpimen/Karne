@@ -4,11 +4,14 @@ from rest_framework import generics, permissions, viewsets
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
+from rest_framework_simplejwt.views import TokenObtainPairView
 from .models import Assignment, Program, Session, User
 from .permissions import IsClient, IsCoachOrAdmin
 from .services.assignment import assign_program_to_client
 from .serializers import (
     AssignmentSerializer,
+    AuthTokenObtainPairSerializer,
+    DeviceTokenUpsertSerializer,
     JoinCoachSerializer,
     ProgramSerializer,
     RegisterSerializer,
@@ -17,6 +20,11 @@ from .serializers import (
 )
 
 User = get_user_model()
+
+
+class AuthTokenObtainPairView(TokenObtainPairView):
+    serializer_class = AuthTokenObtainPairSerializer
+
 
 class RegisterView(generics.CreateAPIView):
     permission_classes = [permissions.AllowAny]
@@ -29,6 +37,30 @@ class CurrentUserView(generics.RetrieveAPIView):
 
     def get_object(self):
         return self.request.user
+
+
+class DeviceTokenUpsertView(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated, IsClient]
+    serializer_class = DeviceTokenUpsertSerializer
+
+    def _upsert_token(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        token = serializer.save()
+        return Response(
+            {
+                'id': token.id,
+                'token': token.token,
+                'platform': token.platform,
+                'last_seen_at': token.last_seen_at,
+            }
+        )
+
+    def post(self, request, *args, **kwargs):
+        return self._upsert_token(request, *args, **kwargs)
+
+    def patch(self, request, *args, **kwargs):
+        return self._upsert_token(request, *args, **kwargs)
 
 
 class JoinCoachView(generics.GenericAPIView):

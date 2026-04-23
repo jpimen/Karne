@@ -1,4 +1,5 @@
 import uuid
+from datetime import timedelta
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.utils import timezone
@@ -21,6 +22,17 @@ WORKOUT_SESSION_STATUS_CHOICES = [
     ('completed', 'Completed'),
     ('missed', 'Missed'),
     ('skipped', 'Skipped'),
+]
+
+DEVICE_PLATFORM_CHOICES = [
+    ('fcm', 'FCM'),
+    ('apns', 'APNS'),
+]
+
+NOTIFICATION_STATUS_CHOICES = [
+    ('pending', 'Pending'),
+    ('sent', 'Sent'),
+    ('failed', 'Failed'),
 ]
 
 
@@ -232,3 +244,65 @@ class LoggedSet(models.Model):
 
     def __str__(self):
         return f'{self.session} set {self.set_number}'
+
+
+class DeviceToken(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='device_tokens')
+    token = models.CharField(max_length=255)
+    platform = models.CharField(max_length=16, choices=DEVICE_PLATFORM_CHOICES)
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_seen_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['token', 'platform'], name='unique_device_token_platform'),
+        ]
+        indexes = [
+            models.Index(fields=['user', 'platform']),
+            models.Index(fields=['last_seen_at']),
+        ]
+
+    @classmethod
+    def upsert_for_user(cls, *, user, token, platform):
+        now = timezone.now()
+        normalized_token = token.strip()
+        device_token, _ = cls.objects.update_or_create(
+            token=normalized_token,
+            platform=platform,
+            defaults={
+                'user': user,
+                'last_seen_at': now,
+            },
+        )
+        return device_token
+
+    @classmethod
+    def stale_cutoff(cls):
+        return timezone.now() - timedelta(days=60)
+
+    @classmethod
+    def active_for_user(cls, *, user):
+        return cls.objects.filter(user=user, last_seen_at__gte=cls.stale_cutoff()).order_by('id')
+
+    def __str__(self):
+        return f'{self.user.username} {self.platform} token'
+
+
+class Notification(models.Model):
+    recipient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
+    type = models.CharField(max_length=64)
+    payload = models.JSONField(default=dict, blank=True)
+    status = models.CharField(max_length=16, choices=NOTIFICATION_STATUS_CHOICES, default='pending')
+    provider_response = models.JSONField(blank=True, default=dict)
+    retry_count = models.PositiveSmallIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at', '-id']
+        indexes = [
+            models.Index(fields=['recipient', 'status']),
+            models.Index(fields=['type', 'created_at']),
+        ]
+
+    def __str__(self):
+        return f'{self.type} -> {self.recipient.username} ({self.status})'
