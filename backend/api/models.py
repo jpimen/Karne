@@ -15,30 +15,47 @@ PROGRAM_STATUS_CHOICES = [
     ('archived', 'Archived'),
 ]
 
+WORKOUT_SESSION_STATUS_CHOICES = [
+    ('scheduled', 'Scheduled'),
+    ('in_progress', 'In Progress'),
+    ('completed', 'Completed'),
+    ('missed', 'Missed'),
+    ('skipped', 'Skipped'),
+]
+
 
 def generate_join_code():
     return uuid.uuid4().hex[:8].upper()
 
 
 class User(AbstractUser):
-    # role = models.CharField(max_length=16, choices=ROLE_CHOICES, default='client')
-    # coach = models.ForeignKey(
-    #     'self',
-    #     on_delete=models.SET_NULL,
-    #     null=True,
-    #     blank=True,
-    #     related_name='clients',
-    # )
-    # join_code = models.CharField(blank=True, max_length=16, null=True, unique=True)
-    # created_at = models.DateTimeField(auto_now_add=True)
+    role = models.CharField(max_length=16, choices=ROLE_CHOICES, default='client')
+    coach = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='clients',
+        limit_choices_to={'role__in': ['coach', 'admin']},
+    )
+    join_code = models.CharField(blank=True, max_length=16, null=True, unique=True)
     avatar = models.URLField(blank=True, null=True)
     status = models.CharField(choices=[('novice', 'Novice'), ('pro', 'Pro'), ('elite', 'Elite')], default='novice', max_length=20)
     subscription_tier = models.CharField(blank=True, default='free', max_length=32)
 
-    # def save(self, *args, **kwargs):
-    #     if not self.join_code:
-    #         self.join_code = generate_join_code()
-    #     super().save(*args, **kwargs)
+    def _generate_unique_join_code(self):
+        for _ in range(10):
+            candidate = generate_join_code()
+            if not type(self).objects.filter(join_code=candidate).exclude(pk=self.pk).exists():
+                return candidate
+        raise ValueError('Unable to generate a unique join code.')
+
+    def save(self, *args, **kwargs):
+        if self.role in {'coach', 'admin'} and not self.join_code:
+            self.join_code = self._generate_unique_join_code()
+        if self.role == 'client':
+            self.join_code = None
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.username
@@ -105,6 +122,76 @@ class ProgramExercise(models.Model):
 
     def __str__(self):
         return f'{self.name} ({self.day})'
+
+
+class WorkoutPlan(models.Model):
+    coach = models.ForeignKey(User, on_delete=models.CASCADE, related_name='workout_plans_created')
+    client = models.ForeignKey(User, on_delete=models.CASCADE, related_name='workout_plans')
+    program = models.ForeignKey(Program, on_delete=models.CASCADE, related_name='workout_plans')
+    start_date = models.DateField()
+    end_date = models.DateField()
+    assigned_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-assigned_at']
+
+    def __str__(self):
+        return f'{self.client.username} plan {self.program.name} ({self.start_date} to {self.end_date})'
+
+
+class WorkoutSession(models.Model):
+    workout_plan = models.ForeignKey(WorkoutPlan, on_delete=models.CASCADE, related_name='sessions')
+    coach = models.ForeignKey(User, on_delete=models.CASCADE, related_name='assigned_workout_sessions')
+    client = models.ForeignKey(User, on_delete=models.CASCADE, related_name='workout_sessions')
+    template_day = models.ForeignKey(Day, on_delete=models.SET_NULL, null=True, blank=True, related_name='workout_sessions')
+    scheduled_date = models.DateField()
+    week_number = models.PositiveSmallIntegerField()
+    day_number = models.PositiveSmallIntegerField()
+    status = models.CharField(max_length=16, choices=WORKOUT_SESSION_STATUS_CHOICES, default='scheduled')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['scheduled_date', 'id']
+        indexes = [
+            models.Index(fields=['client', 'scheduled_date']),
+            models.Index(fields=['coach', 'status']),
+        ]
+
+    def __str__(self):
+        return f'{self.client.username} workout {self.scheduled_date} ({self.status})'
+
+
+class ExerciseSnapshot(models.Model):
+    workout_session = models.ForeignKey(WorkoutSession, on_delete=models.CASCADE, related_name='exercise_snapshots')
+    source_exercise = models.ForeignKey(ProgramExercise, on_delete=models.SET_NULL, null=True, blank=True, related_name='exercise_snapshots')
+    order = models.PositiveSmallIntegerField(default=0)
+    name = models.CharField(max_length=140)
+    sets = models.PositiveSmallIntegerField(default=3)
+    reps = models.CharField(max_length=32, blank=True)
+    load = models.CharField(max_length=32, blank=True)
+    rpe = models.DecimalField(max_digits=4, decimal_places=1, blank=True, null=True)
+    intensity = models.CharField(max_length=32, blank=True)
+    rest = models.CharField(max_length=32, blank=True)
+    notes = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ['order']
+        unique_together = ('workout_session', 'order')
+
+    def __str__(self):
+        return f'{self.name} snapshot ({self.workout_session_id})'
+
+
+class WorkoutLog(models.Model):
+    workout_session = models.OneToOneField(WorkoutSession, on_delete=models.CASCADE, related_name='workout_log')
+    client = models.ForeignKey(User, on_delete=models.CASCADE, related_name='workout_logs')
+    completed_at = models.DateTimeField(auto_now_add=True)
+    duration = models.PositiveIntegerField(default=0)
+    notes = models.TextField(blank=True)
+    exercise_results = models.JSONField(default=list, blank=True)
+
+    def __str__(self):
+        return f'Workout log {self.workout_session_id}'
 
 
 class Assignment(models.Model):

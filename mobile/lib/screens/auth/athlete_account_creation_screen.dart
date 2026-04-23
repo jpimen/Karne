@@ -102,6 +102,8 @@ class _AthleteAccountCreationScreenState
         _nameController.text, // Using name as username for now
         _emailController.text,
         _passwordController.text,
+        role: 'client',
+        coachJoinCode: widget.inviteCode,
       );
 
       if (mounted) {

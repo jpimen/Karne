@@ -1,12 +1,15 @@
-from django.db.models import Count
 from django.contrib.auth import get_user_model
+from django.db import transaction
 from rest_framework import generics, permissions, viewsets
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from .models import Assignment, Program, Session, User
+from .permissions import IsClient, IsCoachOrAdmin
+from .services.assignment import assign_program_to_client
 from .serializers import (
     AssignmentSerializer,
+    JoinCoachSerializer,
     ProgramSerializer,
     RegisterSerializer,
     SessionSerializer,
@@ -28,20 +31,43 @@ class CurrentUserView(generics.RetrieveAPIView):
         return self.request.user
 
 
+class JoinCoachView(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = JoinCoachSerializer
+
+    def post(self, request, *args, **kwargs):
+        if request.user.role != 'client':
+            raise PermissionDenied('Only client users can join a coach.')
+
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        request.user.coach = serializer.validated_data['coach']
+        request.user.save(update_fields=['coach'])
+
+        return Response(UserSerializer(request.user, context={'request': request}).data)
+
+
 class ProgramViewSet(viewsets.ModelViewSet):
     serializer_class = ProgramSerializer
-    permission_classes = [permissions.AllowAny]  # Temporarily allow any for testing
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsCoachOrAdmin()]
+        return [permissions.IsAuthenticated()]
 
     def get_queryset(self):
         user = self.request.user
-        if user.is_authenticated:
-            # Temporarily return all published programs for any authenticated user
-            return Program.objects.filter(status='published').order_by('-created_at')
-        return Program.objects.filter(status='published').order_by('-created_at')
+        queryset = Program.objects.order_by('-created_at')
+
+        if user.role == 'admin':
+            return queryset
+        if user.role == 'coach':
+            return queryset.filter(coach=user)
+        return queryset.filter(assignments__client=user, status='published').distinct()
 
     def perform_create(self, serializer):
-        if self.request.user.role not in ['coach', 'admin']:
-            raise PermissionDenied('Only coaches and admins can create programs.')
         serializer.save(coach=self.request.user)
 
 
@@ -51,8 +77,10 @@ class ClientViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        if user.role in ['coach', 'admin']:
-            return User.objects.filter(coach=user, role='client')
+        if user.role == 'admin':
+            return User.objects.filter(role='client').order_by('username')
+        if user.role == 'coach':
+            return User.objects.filter(coach=user, role='client').order_by('username')
         return User.objects.filter(pk=user.pk)
 
 
@@ -60,28 +88,68 @@ class AssignmentViewSet(viewsets.ModelViewSet):
     serializer_class = AssignmentSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsCoachOrAdmin()]
+        return [permissions.IsAuthenticated()]
+
     def get_queryset(self):
         user = self.request.user
-        if user.role in ['coach', 'admin']:
-            return Assignment.objects.filter(program__coach=user).order_by('-assigned_at')
-        return Assignment.objects.filter(client=user).order_by('-assigned_at')
+        queryset = Assignment.objects.select_related('program', 'client').order_by('-assigned_at')
+        if user.role == 'admin':
+            return queryset
+        if user.role == 'coach':
+            return queryset.filter(program__coach=user)
+        return queryset.filter(client=user)
 
     def perform_create(self, serializer):
+        user = self.request.user
         program = serializer.validated_data['program']
-        if program.coach != self.request.user:
+        client = serializer.validated_data['client']
+        start_date = serializer.validated_data['start_date']
+
+        if user.role == 'coach' and program.coach_id != user.id:
             raise PermissionDenied('You may only assign programs you own.')
-        serializer.save()
+
+        if client.role != 'client':
+            raise PermissionDenied('Only client users can receive assignments.')
+
+        if user.role == 'coach' and client.coach_id and client.coach_id != user.id:
+            raise PermissionDenied('This client belongs to a different coach.')
+
+        if user.role == 'coach' and client.coach_id is None:
+            client.coach = user
+            client.save(update_fields=['coach'])
+
+        with transaction.atomic():
+            serializer.save()
+            assign_program_to_client(
+                coach=program.coach,
+                client=client,
+                program=program,
+                start_date=start_date,
+            )
 
 
 class SessionViewSet(viewsets.ModelViewSet):
     serializer_class = SessionSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsClient()]
+        return [permissions.IsAuthenticated()]
+
     def get_queryset(self):
         user = self.request.user
+        queryset = Session.objects.select_related('client', 'day').order_by('-date')
+        if user.role == 'admin':
+            return queryset
+        if user.role == 'coach':
+            return queryset.filter(client__coach=user)
         if user.role == 'client':
-            return Session.objects.filter(client=user).order_by('-date')
-        return Session.objects.filter(client__coach=user).order_by('-date')
+            return queryset.filter(client=user)
+        return queryset.none()
 
     def perform_create(self, serializer):
         if self.request.user.role != 'client':
@@ -95,11 +163,19 @@ def dashboard(request):
     user = request.user
 
     if user.role in ['coach', 'admin']:
-        total_clients = User.objects.filter(coach=user, role='client').count()
-        active_programs = Program.objects.filter(coach=user, status='published').count()
-        programs_this_week = Program.objects.filter(coach=user, status='published').count()
+        if user.role == 'admin':
+            client_queryset = User.objects.filter(role='client')
+            program_queryset = Program.objects.filter(status='published')
+            assignments = Assignment.objects.select_related('client', 'program').order_by('-assigned_at')[:5]
+        else:
+            client_queryset = User.objects.filter(coach=user, role='client')
+            program_queryset = Program.objects.filter(coach=user, status='published')
+            assignments = Assignment.objects.select_related('client', 'program').filter(program__coach=user).order_by('-assigned_at')[:5]
+
+        total_clients = client_queryset.count()
+        active_programs = program_queryset.count()
+        programs_this_week = program_queryset.count()
         recent_activity = []
-        assignments = Assignment.objects.filter(program__coach=user).order_by('-assigned_at')[:5]
         for assignment in assignments:
             recent_activity.append({
                 'client': assignment.client.username,
